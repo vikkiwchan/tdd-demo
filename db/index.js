@@ -16,17 +16,35 @@ const Employee = db.define('employee', {
   },
 });
 
-Employee.addHook('beforeSave', (employee) => {
+Employee.addHook('beforeSave', async (employee) => {
   if (!employee.bio) {
     employee.bio = `BIO FOR ${employee.name} ${faker.lorem.paragraphs(3)} ${
       employee.name
     }`;
+  }
+  if (employee.departmentId) {
+    const otherEmployees = await Employee.findAll({
+      where: {
+        departmentId: employee.departmentId,
+      },
+    });
+    if (
+      otherEmployees.length === 3 &&
+      // .find is an array prototype
+      !otherEmployees.find((emp) => emp.id === employee.id)
+    ) {
+      throw new Error('no more than 3');
+    }
   }
 });
 
 const Department = db.define('department', {
   name: {
     type: STRING,
+    allowNull: false,
+    validate: {
+      notEmpty: true,
+    },
   },
 });
 
@@ -54,4 +72,8 @@ const syncAndSeed = async () => {
 
 module.exports = {
   syncAndSeed,
+  models: {
+    Employee,
+    Department,
+  },
 };
